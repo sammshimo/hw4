@@ -10,6 +10,7 @@
   let tipMapFunctions = "";
   let tipData = "no data";
   let allData = "no data";
+  let title = "";
 
   // load data and make scatter plot after window loads
   window.onload = function() {
@@ -63,7 +64,7 @@
       .style('align-items', 'center')
       .style('justify-content', 'center')
       .style('position', 'absolute')
-      .style('width', '300px')
+      .style('width', '280px')
       .style('height', '300px')
       .style('border', '2px solid grey')
       .style('border-radius', '8px')
@@ -71,7 +72,7 @@
       .style('pointer-events', 'none');
 
       tipSVG = tooltip.append('svg')
-        .attr('width', 300)
+        .attr('width', 280)
         .attr('height', 300)
         .style('font', '3pt sans-serif');
       
@@ -96,6 +97,34 @@
       .text('Life Expectancy');
   }
 
+  // make title and axes labels
+  function makeTipLabels(country) {
+    tipSVG.append('text')
+      .attr('x', 50)
+      .attr('y', 20)
+      .style('font-size', '10pt')
+      .text("Population Over Time")
+      .attr('fill', 'grey');
+
+    tipSVG.append('text')
+      .attr('x', 50)
+      .attr('y', 35)
+      .style('font-size', '10pt')
+      .text("(" + country + ")")
+      .attr('fill', 'grey');
+
+    tipSVG.append('text')
+      .attr('x', 130 )
+      .attr('y', 290)
+      .style('font-size', '8pt')
+      .text('Year');
+
+    tipSVG.append('text')
+      .attr('transform', 'translate(10, 200)rotate(-90)')
+      .style('font-size', '8pt')
+      .text('Population (millions)');
+  }
+
   // plot all the data points on the SVG
   // and add tooltip functionality
   function plotData(map) {
@@ -118,8 +147,8 @@
         .attr('cx', xMap)
         .attr('cy', yMap)
         .attr('r', (d) => { return Math.log(d['population'] * 100000 / max) })
-        .attr('stroke', '#B6598A')
-        .attr('fill', 'white')
+        .attr('stroke', '#DE4374')
+        .attr('fill', '#FFECF2')
         // add tooltip functionality to points
         .on("mouseover", (d) => {
           tooltip.transition()
@@ -132,7 +161,7 @@
         })
         .on("mouseout", (d) => {
           tooltip.transition()
-            .delay(250)
+            // .delay(250)
             .duration(500)
             .style("opacity", 0);
         });
@@ -148,12 +177,18 @@
                  .attr("y", yMap)
                  .text(function (d) { return d['country'] })
                  .attr("font-family", "sans-serif")
-                 .attr("font-size", "8pt")
+                 .attr("font-size", "10pt")
                  .attr("fill", "gray");
   }
 
   // create graph in tooltip
   function tipGraph(country) {
+
+    // clear prior graph from tooltip
+    tipSVG.selectAll('g').remove();
+    tipSVG.selectAll('text').remove();
+    tipSVG.selectAll('path').remove();
+
     // get arrays of fertility rate data and life Expectancy data
     tipData = allData.filter(function(d) {
       return d['country'] == country
@@ -171,7 +206,7 @@
     plotGraph(tipMapFunctions);
 
     // draw title and axes labels
-    // makeLabels();
+    makeTipLabels(country);
   }
 
   // draw the axes and ticks
@@ -244,9 +279,6 @@
   // draw the axes and ticks FOR TOOLTIP
   function drawTipAxes(limits, x, y) {
 
-    // remove all prior axes in tool tip
-    tipSVG.selectAll('g').remove();
-
     // function to scale x value
     let xScale = d3.scaleLinear()
       .domain([limits.xMin, limits.xMax])
@@ -280,11 +312,6 @@
   function plotGraph(map) {
     let xScale = map.xScale;
     let yScale = map.yScale;
-
-    // clear prior graph (if any) that is in tooltip
-    tipSVG.selectAll('path').remove();
-
-    console.log(tipData)
 
     // d3's line generator
     const line = d3.line()
