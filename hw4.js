@@ -63,19 +63,17 @@
       .style('align-items', 'center')
       .style('justify-content', 'center')
       .style('position', 'absolute')
-      .style('width', '200px')
-      .style('height', '200px')
-      .style('font', '5px sans-serif')
-      .style('text-align', 'center')
-      .style('padding', '2px')
-      .style('border', '2px solid black')
+      .style('width', '300px')
+      .style('height', '300px')
+      .style('border', '2px solid grey')
       .style('border-radius', '8px')
-      .style('background', '#F4F4F4')
+      .style('background', 'white')
       .style('pointer-events', 'none');
 
       tipSVG = tooltip.append('svg')
-        .attr('width', 200)
-        .attr('height', 200)
+        .attr('width', 300)
+        .attr('height', 300)
+        .style('font', '3pt sans-serif');
       
     } 
 
@@ -142,7 +140,7 @@
         // add data point labels
         svgContainer.selectAll('.text')
         .data(data.filter((d) => {
-            return +d['population'] >= 100000000
+            return +d['population'] > 100000000
         }))
         .enter()
         .append('text')
@@ -150,7 +148,7 @@
                  .attr("y", yMap)
                  .text(function (d) { return d['country'] })
                  .attr("font-family", "sans-serif")
-                 .attr("font-size", "5pt")
+                 .attr("font-size", "8pt")
                  .attr("fill", "gray");
   }
 
@@ -160,7 +158,6 @@
     tipData = allData.filter(function(d) {
       return d['country'] == country
     })
-    console.log(tipData);
     let year_data = tipData.map((row) => parseInt(row["year"]));
     let pop_data = tipData.map((row) => parseInt(row["population"]));
 
@@ -246,42 +243,34 @@
 
   // draw the axes and ticks FOR TOOLTIP
   function drawTipAxes(limits, x, y) {
-    // return x value from a row of data
-    // let xValue = function(d) { return +d[x]; }
 
     // remove all prior axes in tool tip
     tipSVG.selectAll('g').remove();
 
     // function to scale x value
     let xScale = d3.scaleLinear()
-      .domain([limits.xMin, limits.xMax]) // give domain buffer room
-      .range([20, 180])
-
-    // xMap returns a scaled x value from a row of data
-    // let xMap = function(d) { return xScale(xValue(d)); };
+      .domain([limits.xMin, limits.xMax])
+      .range([50, 250])
 
     // plot x-axis at bottom of SVG
     tipSVG.append("g")
-      .attr('transform', 'translate(0, 180)')
-      .call(d3.axisBottom(xScale));
+      .attr('transform', 'translate(0, 250)')
+      .call(d3.axisBottom(xScale)
+      .ticks(7)
+      .tickFormat(d3.format("d")));
 
-    // return y value from a row of data
-    // let yValue = function(d) { return +d[y]}
 
     // function to scale y
     let yScale = d3.scaleLinear()
-      .domain([limits.yMax, limits.yMin]) // give domain buffer
-      .range([20, 180])
-
-    // yMap returns a scaled y value from a row of data
-    // let yMap = function (d) { return yScale(yValue(d)); };
+      .domain([+limits.yMax/1000000, +limits.yMin/1000000]) // give domain buffer
+      .range([50, 250])
 
     // plot y-axis at the left of SVG
     tipSVG.append('g')
-      .attr('transform', 'translate(20, 0)')
+      .attr('transform', 'translate(50, 0)')
       .call(d3.axisLeft(yScale));
 
-    // return mapping and scaling functions
+    // return scaling functions
     return {
       xScale: xScale,
       yScale: yScale
@@ -295,10 +284,12 @@
     // clear prior graph (if any) that is in tooltip
     tipSVG.selectAll('path').remove();
 
+    console.log(tipData)
+
     // d3's line generator
     const line = d3.line()
-    .x(d => xScale(d['year'])) // set the x values for the line generator
-    .y(d => yScale(+d['population'])) // set the y values for the line generator 
+    .x(d => parseInt(xScale(d['year']))) // set the x values for the line generator
+    .y(d => parseInt(yScale(+d['population']/1000000))) // set the y values for the line generator 
 
     // append line to svg
     tipSVG.append("path")
@@ -306,8 +297,8 @@
       // https://stackoverflow.com/questions/13728402/what-is-the-difference-d3-datum-vs-data
       .datum(tipData)
       .attr("d", function(d) { return line(d) })
-      .attr("fill", "steelblue")
-      .attr("stroke", "steelblue")
+      .attr("fill", "none")
+      .attr("stroke", "#DE4374")
   }
 
 })();
