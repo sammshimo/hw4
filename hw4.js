@@ -120,7 +120,7 @@
       .text('Year');
 
     tipSVG.append('text')
-      .attr('transform', 'translate(10, 200)rotate(-90)')
+      .attr('transform', 'translate(13, 200)rotate(-90)')
       .style('font-size', '8pt')
       .text('Population (millions)');
   }
