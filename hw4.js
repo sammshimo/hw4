@@ -6,6 +6,10 @@
   let svgContainer = ""; // keep SVG reference in global scope
   let tooltip = "";
   let mapFunctions = "";
+  let tipSVG = "";
+  let tipMapFunctions = "";
+  let tipData = "no data";
+  let allData = "no data";
 
   // load data and make scatter plot after window loads
   window.onload = function() {
@@ -23,14 +27,15 @@
 
     // d3.csv is basically fetch but it can be be passed a csv file as a parameter
     d3.csv("gapminder.csv")
-      .then((data) => makeScatterPlot(data.filter(function(d) {
-          return d['year'] == '1980'
-      })));
+      .then((data) => makeScatterPlot(data));
   }
 
   // make scatter plot with trend line
   function makeScatterPlot(csvData) {
-    data = csvData // assign data as global variable
+    allData = csvData // assign data as global variable
+    data = csvData.filter(function(d) {
+      return d['year'] == '1980'
+    });
 
     // get arrays of fertility rate data and life Expectancy data
     let fertility_data = data.map((row) => parseInt(row["fertility"]));
@@ -58,8 +63,8 @@
       .style('align-items', 'center')
       .style('justify-content', 'center')
       .style('position', 'absolute')
-      .style('width', '150px')
-      .style('height', '150px')
+      .style('width', '200px')
+      .style('height', '200px')
       .style('font', '5px sans-serif')
       .style('text-align', 'center')
       .style('padding', '2px')
@@ -68,7 +73,10 @@
       .style('background', '#F4F4F4')
       .style('pointer-events', 'none');
 
-      let tipSVG = tooltip.append('svg');
+      tipSVG = tooltip.append('svg')
+        .attr('width', 200)
+        .attr('height', 200)
+      
     } 
 
   // make title and axes labels
@@ -96,6 +104,7 @@
     // mapping functions
     let xMap = map.x;
     let yMap = map.y;
+    let xMap20 = map.x20;
 
 
     // append data to SVG and plot as points
@@ -118,10 +127,10 @@
           tooltip.transition()
             .duration(200)
             .style("opacity", .9)
-          tooltip.html('')
+          tooltip
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
-          tipGraph();
+            tipGraph(d['country']);
         })
         .on("mouseout", (d) => {
           tooltip.transition()
@@ -137,7 +146,7 @@
         }))
         .enter()
         .append('text')
-        .attr("x", xMap)
+        .attr("x", xMap20)
                  .attr("y", yMap)
                  .text(function (d) { return d['country'] })
                  .attr("font-family", "sans-serif")
@@ -146,9 +155,26 @@
   }
 
   // create graph in tooltip
-  function tipGraph() {
-      console.log('tip graph');
-      // tipGraph.append('line')
+  function tipGraph(country) {
+    // get arrays of fertility rate data and life Expectancy data
+    tipData = allData.filter(function(d) {
+      return d['country'] == country
+    })
+    console.log(tipData);
+    let year_data = tipData.map((row) => parseInt(row["year"]));
+    let pop_data = tipData.map((row) => parseInt(row["population"]));
+
+    // find data limits
+    let axesLimits = findMinMax(year_data, pop_data);
+
+    // draw axes and return scaling + mapping functions
+    tipMapFunctions = drawTipAxes(axesLimits, "year", "population");
+
+    // plot data as points and add tooltip functionality
+    plotGraph(tipMapFunctions);
+
+    // draw title and axes labels
+    // makeLabels();
   }
 
   // draw the axes and ticks
@@ -163,6 +189,7 @@
 
     // xMap returns a scaled x value from a row of data
     let xMap = function(d) { return xScale(xValue(d)); };
+    let xMap20 = function(d) { return +xScale(xValue(d)) + 20 }
 
     // plot x-axis at bottom of SVG
     let xAxis = d3.axisBottom().scale(xScale);
@@ -192,7 +219,8 @@
       x: xMap,
       y: yMap,
       xScale: xScale,
-      yScale: yScale
+      yScale: yScale,
+      x20: xMap20
     };
   }
 
@@ -214,6 +242,72 @@
       yMin : yMin,
       yMax : yMax
     }
+  }
+
+  // draw the axes and ticks FOR TOOLTIP
+  function drawTipAxes(limits, x, y) {
+    // return x value from a row of data
+    // let xValue = function(d) { return +d[x]; }
+
+    // remove all prior axes in tool tip
+    tipSVG.selectAll('g').remove();
+
+    // function to scale x value
+    let xScale = d3.scaleLinear()
+      .domain([limits.xMin, limits.xMax]) // give domain buffer room
+      .range([20, 180])
+
+    // xMap returns a scaled x value from a row of data
+    // let xMap = function(d) { return xScale(xValue(d)); };
+
+    // plot x-axis at bottom of SVG
+    tipSVG.append("g")
+      .attr('transform', 'translate(0, 180)')
+      .call(d3.axisBottom(xScale));
+
+    // return y value from a row of data
+    // let yValue = function(d) { return +d[y]}
+
+    // function to scale y
+    let yScale = d3.scaleLinear()
+      .domain([limits.yMax, limits.yMin]) // give domain buffer
+      .range([20, 180])
+
+    // yMap returns a scaled y value from a row of data
+    // let yMap = function (d) { return yScale(yValue(d)); };
+
+    // plot y-axis at the left of SVG
+    tipSVG.append('g')
+      .attr('transform', 'translate(20, 0)')
+      .call(d3.axisLeft(yScale));
+
+    // return mapping and scaling functions
+    return {
+      xScale: xScale,
+      yScale: yScale
+    };
+  }
+
+  function plotGraph(map) {
+    let xScale = map.xScale;
+    let yScale = map.yScale;
+
+    // clear prior graph (if any) that is in tooltip
+    tipSVG.selectAll('path').remove();
+
+    // d3's line generator
+    const line = d3.line()
+    .x(d => xScale(d['year'])) // set the x values for the line generator
+    .y(d => yScale(+d['population'])) // set the y values for the line generator 
+
+    // append line to svg
+    tipSVG.append("path")
+      // difference between data and datum:
+      // https://stackoverflow.com/questions/13728402/what-is-the-difference-d3-datum-vs-data
+      .datum(tipData)
+      .attr("d", function(d) { return line(d) })
+      .attr("fill", "steelblue")
+      .attr("stroke", "steelblue")
   }
 
 })();
